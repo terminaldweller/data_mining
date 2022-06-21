@@ -85,10 +85,17 @@ def get_euclidean_distance(
     return sum(v1 - v2)
 
 
+# TODO- not complete
 def get_mahalanobis_distance(
     v1, v2: np.ndarray[typing.Any, np.dtype[np.float32]]
-) -> float:
+) -> np.ndarray[typing.Any, np.dtype[np.float32]]:
     """Get the Mahalonobis distance."""
+    v_mu = v1 - np.mean(v2)
+    cov = np.cov(v2.T)
+    inv_covmat = np.linalg.inv(cov)
+    left = np.dot(v_mu, inv_covmat)
+    mahal = np.dot(left, v_mu.T)
+    return mahal.diagonal()
 
 
 def get_calculated_class(

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """A* algorithm implementation."""
-# https://www.simplilearn.com/tutorials/artificial-intelligence-tutorial/a-star-algorithm
-# https://www.redblobgames.com/pathfinding/a-star/introduction.html
 import typing
 
 
