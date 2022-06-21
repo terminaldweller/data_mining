@@ -14,7 +14,7 @@ class Argparser:  # pylint: disable=too-few-public-methods
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            "--n", "-n", type=int, help="vector count", default=1000
+            "--n", "-n", type=int, help="vector count", default=10
         )
         parser.add_argument(
             "--m", "-m", type=int, help="vector length", default=4
@@ -25,7 +25,9 @@ class Argparser:  # pylint: disable=too-few-public-methods
         parser.add_argument(
             "--v", "-v", type=int, help="number of codebook vectors", default=4
         )
-        parser.add_argument("--alpha", "-a", type=float, help="learning rate")
+        parser.add_argument(
+            "--alpha", "-a", type=float, help="learning rate", default=0.01
+        )
         parser.add_argument("--epsilon", "-e", type=float, help="tolerance")
         parser.add_argument(
             "--maxiter",
@@ -75,12 +77,18 @@ def classification_function(class_list: typing.List[int], i: int) -> int:
     return class_list[i]
 
 
-@nb.jit(nopython=True, cache=True, parallel=True, fastmath=True)
-def get_distance(
+# @nb.jit(nopython=True, cache=True, parallel=True, fastmath=True)
+def get_euclidean_distance(
     v1, v2: np.ndarray[typing.Any, np.dtype[np.float32]]
 ) -> float:
-    """The distance function."""
+    """Get the Euclidean distance function."""
     return sum(v1 - v2)
+
+
+def get_mahalanobis_distance(
+    v1, v2: np.ndarray[typing.Any, np.dtype[np.float32]]
+) -> float:
+    """Get the Mahalonobis distance."""
 
 
 def get_calculated_class(
@@ -89,9 +97,12 @@ def get_calculated_class(
     """Get the calculated calss."""
     distances: typing.List[float] = [0] * V.shape[1]
     for i in nb.prange(0, V.shape[1]):
-        distances[i] = get_distance(v, V[None, i : i + 1])
+        distances[i] = get_euclidean_distance(v, V[:, i : i + 1])
+        print("v1:\n", v)
+        print("v2:\n", V[:, i : i + 1])
+        print("distances[i]:\n", distances[i])
 
-    minimum = min(distances)
+    minimum = np.min(distances, axis=0)
     minimum_index = distances.index(minimum)
 
     return minimum_index
@@ -108,22 +119,25 @@ def lvq(
 ):
     """LVQ."""
     for _ in nb.prange(0, i):
+        print("i:", _)
         for j in nb.prange(0, n):
-            calc_class = get_calculated_class(inputs[None, j : j + 1], V)
+            print("inputs[i]:\n", inputs[:, j : j + 1])
+            calc_class = get_calculated_class(inputs[:, j : j + 1], V)
             real_class = classification_function(class_list, j)
+            print("V:\n", V)
             if calc_class == real_class:
-                V[None, real_class : real_class + 1] = V[
-                    None, real_class : real_class + 1
-                ] + alpha * (
-                    inputs[None, j : j + 1],
-                    V[None, real_class : real_class + 1],
+                V[:, real_class : real_class + 1] = V[
+                    :, real_class : real_class + 1
+                ] + (
+                    alpha * inputs[:, j : j + 1]
+                    - alpha * V[:, real_class : real_class + 1],
                 )
             else:
-                V[None, real_class : real_class + 1] = V[
-                    None, real_class : real_class + 1
-                ] - alpha * (
-                    inputs[None, j : j + 1],
-                    V[None, real_class : real_class + 1],
+                V[:, real_class : real_class + 1] = V[
+                    :, real_class : real_class + 1
+                ] - (
+                    alpha * inputs[:, j : j + 1]
+                    - alpha * V[:, real_class : real_class + 1],
                 )
 
 
@@ -139,6 +153,15 @@ def main():
     print("V:\n", V)
     class_list = genrate_input_classes(argparser.args.n, argparser.args.c)
     print("class_list:\n", class_list)
+    lvq(
+        inputs,
+        V,
+        argparser.args.maxiter,
+        argparser.args.n,
+        argparser.args.c,
+        class_list,
+        argparser.args.alpha,
+    )
 
 
 if __name__ == "__main__":
