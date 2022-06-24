@@ -6,11 +6,11 @@ CC?=clang
 ifdef OS
 CC_FLAGS=
 else
-CC_FLAGS=-std=c11 -fpic $(shell pkg-config --cflags sdl2)
+CC_FLAGS=-std=c11 -fpic $(shell pkg-config --cflags sdl2) -pedantic -Wold-style-definition
 endif
 CC_EXTRA?=
 CTAGS_I_PATH?=./
-LD_FLAGS= $(shell pkg-config --libs sdl2)
+LD_FLAGS= $(shell pkg-config --libs sdl2) -lm
 EXTRA_LD_FLAGS?=
 ADD_SANITIZERS_CC= -g -fsanitize=address -fno-omit-frame-pointer
 ADD_SANITIZERS_LD= -g -fsanitize=address
